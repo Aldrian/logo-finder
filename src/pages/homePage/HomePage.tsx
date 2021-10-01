@@ -1,6 +1,7 @@
 import css from "./HomePage.module.less"
 import React, { ForwardedRef, forwardRef, useRef } from "react"
 import { useStack } from "@cher-ami/router"
+import Map from "components/map/Map"
 
 interface IProps {}
 
@@ -34,7 +35,7 @@ const HomePage = forwardRef((props: IProps, handleRef: ForwardedRef<any>) => {
 
   return (
     <div className={css.root} ref={rootRef}>
-      {componentName}
+      <Map />
     </div>
   )
 })

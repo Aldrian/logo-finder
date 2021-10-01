@@ -10,16 +10,6 @@ export interface IProps {}
 function App(props: IProps) {
   return (
     <div className={css.root}>
-      <nav>
-        <ul>
-          <li>
-            <Link to={"/"}>Home</Link>
-          </li>
-          <li>
-            <Link to={"/work/first-work"}>Work - id: "first-work"</Link>
-          </li>
-        </ul>
-      </nav>
       <Stack className={css.stack} />
     </div>
   )
