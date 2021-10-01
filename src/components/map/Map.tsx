@@ -245,8 +245,6 @@ function Map(props: IProps) {
     }
   }, [viewport, loaded])
 
-  console.log(isMinimapActive)
-
   return (
     <div className={merge([css.root, props.className])} ref={rootRef}>
       <ReactMapGL
