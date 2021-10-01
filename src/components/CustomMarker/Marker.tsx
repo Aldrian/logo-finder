@@ -29,7 +29,12 @@ function CustomMarker(props: IProps) {
       onClick={props.onClick}
     >
       {props.markerData.found ? (
-        <div className={css.found}>
+        <div
+          className={merge([
+            css.found,
+            props.markerData.real ? css.found_real : css.found_fake,
+          ])}
+        >
           <span>{props.markerData.text}</span>
         </div>
       ) : (
