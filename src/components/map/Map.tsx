@@ -8,6 +8,7 @@ import ReactMapGL, {
   FlyToInterpolator,
   InteractiveMapProps,
   Layer,
+  MapEvent,
   MapRef,
   Marker,
   NavigationControl,
@@ -73,6 +74,7 @@ function Map(props: IProps) {
     latitude: baseLocation.latitude,
     longitude: baseLocation.longitude,
     zoom: initialZoom,
+    dragRotate: false,
   }))
 
   // Handle viewport change
@@ -97,9 +99,9 @@ function Map(props: IProps) {
 
   // Minimap
 
-  const minimapInitialZoom = 4
-  const minimapMinZoom = 4
-  const minimapMaxZoom = 4
+  const minimapInitialZoom = 1
+  const minimapMinZoom = 1
+  const minimapMaxZoom = 1
 
   const [isMinimapActive, setIsMinimapActive] = useState(false)
 
@@ -113,6 +115,9 @@ function Map(props: IProps) {
     latitude: baseLocation.latitude,
     longitude: baseLocation.longitude,
     zoom: minimapInitialZoom,
+    dragPan: false,
+    dragRotate: false,
+    keyboard: false,
   }))
 
   // Handle minimap viewport change
@@ -280,6 +285,21 @@ function Map(props: IProps) {
           }}
           onLoad={() => {
             setLoaded(true)
+          }}
+          onClick={(e: MapEvent) => {
+            const newState = {
+              ...minimapViewport,
+              longitude: e.lngLat[0],
+              latitude: e.lngLat[1],
+            }
+            setMinimapViewport(newState)
+            handleMinimapViewportChange(newState)
+          }}
+          getCursor={() => {
+            return "pointer"
+          }}
+          style={{
+            cursor: "pointer",
           }}
         >
           <PositionMarker
