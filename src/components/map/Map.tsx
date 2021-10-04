@@ -32,6 +32,11 @@ export interface IMarker {
   text: string
 }
 
+export interface ISimpleMarker {
+  id: number
+  found: boolean
+}
+
 interface IPoint {
   latitude: number
   longitude: number
@@ -139,8 +144,7 @@ function Map(props: IProps) {
     })
   }
 
-  // Markers management
-  const [markers, setMarkers] = useState<IMarker[]>([
+  const baseMarkers: IMarker[] = [
     // Sendai
     {
       id: 0,
@@ -204,30 +208,38 @@ function Map(props: IProps) {
       found: false,
       text: "Loupé !",
     },
-  ])
+  ]
+
+  // Markers management
+  const [markers, setMarkers] = useState<ISimpleMarker[]>(
+    baseMarkers.map((marker) => ({
+      id: marker.id,
+      found: false,
+    }))
+  )
 
   const attributionStyle = {
     right: 0,
     top: 0,
   }
 
-  const markerComponents = useMemo(() => {
-    return markers.map((marker, index) => (
-      <CustomMarker
-        key={`marker${index}`}
-        markerData={marker}
-        onClick={() => {
-          console.log("clic")
-          const newMarkers = [...markers]
-          newMarkers[index] = { ...markers[index], found: true }
-          setMarkers(newMarkers)
-        }}
-      />
-    ))
-  }, [markers])
+  // const markerComponents = useMemo(() => {
+  //   return markers.map((marker, index) => (
+  //     <CustomMarker
+  //       key={`marker${index}`}
+  //       markerData={marker}
+  //       onClick={() => {
+  //         console.log("clic")
+  //         const newMarkers = [...markers]
+  //         newMarkers[index] = { ...markers[index], found: true }
+  //         setMarkers(newMarkers)
+  //       }}
+  //     />
+  //   ))
+  // }, [markers])
 
   const fakeMarkers = useMemo(() => {
-    const points = markers
+    const points = baseMarkers
       .filter((e) => !e.real)
       .map((marker) => {
         return point(
@@ -236,10 +248,10 @@ function Map(props: IProps) {
         )
       })
     return featureCollection(points)
-  }, [markers])
+  }, [baseMarkers])
 
   const realMarkers = useMemo(() => {
-    const points = markers
+    const points = baseMarkers
       .filter((e) => e.real)
       .map((marker) => {
         return point(
@@ -248,7 +260,7 @@ function Map(props: IProps) {
         )
       })
     return featureCollection(points)
-  }, [markers])
+  }, [baseMarkers])
 
   // Distance & angle calculation
 
@@ -273,14 +285,17 @@ function Map(props: IProps) {
   useEffect(() => {
     if (loaded) {
       const filteredMarkers = markers.filter((e) => !e.found)
-      const distances = filteredMarkers.map((marker) =>
+      const markerData = filteredMarkers.map((marker) =>
+        baseMarkers.find((e) => e.id === marker.id)
+      )
+      const distances = markerData.map((marker) =>
         distanceToPoint({ latitude: marker.latitude, longitude: marker.longitude })
       )
       const closestIndex = distances.indexOf(Math.min(...distances))
       if (closestIndex !== -1) {
         const degrees = degreeToPoint({
-          latitude: filteredMarkers[closestIndex].latitude,
-          longitude: filteredMarkers[closestIndex].longitude,
+          latitude: markerData[closestIndex].latitude,
+          longitude: markerData[closestIndex].longitude,
         })
         setAngle(degrees)
       }
