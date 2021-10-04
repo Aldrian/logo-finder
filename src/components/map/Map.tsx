@@ -122,9 +122,6 @@ function Map(props: IProps) {
     latitude: baseLocation.latitude,
     longitude: baseLocation.longitude,
     zoom: minimapInitialZoom,
-    dragPan: false,
-    dragRotate: false,
-    keyboard: false,
   }))
 
   // Handle minimap viewport change
@@ -217,7 +214,6 @@ function Map(props: IProps) {
         key={`marker${index}`}
         markerData={marker}
         onClick={() => {
-          console.log("clic")
           const newMarkers = [...markers]
           newMarkers[index] = { ...markers[index], found: true }
           setMarkers(newMarkers)
@@ -365,23 +361,8 @@ function Map(props: IProps) {
           onMouseLeave={() => {
             setIsMinimapActive(false)
           }}
-          onLoad={() => {
-            setLoaded(true)
-          }}
-          onClick={(e: MapEvent) => {
-            const newState = {
-              ...minimapViewport,
-              longitude: e.lngLat[0],
-              latitude: e.lngLat[1],
-            }
-            setMinimapViewport(newState)
-            handleMinimapViewportChange(newState)
-          }}
-          getCursor={() => {
-            return "pointer"
-          }}
           style={{
-            cursor: "pointer",
+            zIndex: 4,
           }}
         >
           <PositionMarker
