@@ -49,17 +49,17 @@ function Helper(props: IProps) {
       <div className={css.row}>
         <span>Niveau zoom carte principale : </span>
         <button
-          className={merge([css.button, props.zoom === 18 ? css.button_active : ""])}
+          className={merge([css.button, props.zoom === 15 ? css.button_active : ""])}
           onClick={() => {
-            props.setZoom(18)
+            props.setZoom(15)
           }}
         >
           Plus zoomé
         </button>
         <button
-          className={merge([css.button, props.zoom === 15 ? css.button_active : ""])}
+          className={merge([css.button, props.zoom === 13 ? css.button_active : ""])}
           onClick={() => {
-            props.setZoom(15)
+            props.setZoom(13)
           }}
         >
           Moins zoomé
