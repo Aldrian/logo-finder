@@ -217,7 +217,6 @@ function Map(props: IProps) {
         key={`marker${index}`}
         markerData={marker}
         onClick={() => {
-          console.log("clic")
           const newMarkers = [...markers]
           newMarkers[index] = { ...markers[index], found: true }
           setMarkers(newMarkers)
@@ -382,6 +381,7 @@ function Map(props: IProps) {
           }}
           style={{
             cursor: "pointer",
+            zIndex: 4,
           }}
         >
           <PositionMarker
