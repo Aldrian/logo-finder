@@ -238,8 +238,8 @@ function Map(props: IProps) {
   //   ))
   // }, [markers])
 
-  const fakeMarkers = useMemo(() => {
-    const points = baseMarkers
+  const fakeMarkers = featureCollection(
+    baseMarkers
       .filter((e) => !e.real)
       .map((marker) => {
         return point(
@@ -247,11 +247,10 @@ function Map(props: IProps) {
           { text: marker.text, id: marker.id } // properties
         )
       })
-    return featureCollection(points)
-  }, [baseMarkers])
+  )
 
-  const realMarkers = useMemo(() => {
-    const points = baseMarkers
+  const realMarkers = featureCollection(
+    baseMarkers
       .filter((e) => e.real)
       .map((marker) => {
         return point(
@@ -259,8 +258,7 @@ function Map(props: IProps) {
           { text: marker.text, icon: "soshLogo", id: marker.id } // properties
         )
       })
-    return featureCollection(points)
-  }, [baseMarkers])
+  )
 
   // Distance & angle calculation
 
