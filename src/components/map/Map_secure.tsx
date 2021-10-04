@@ -18,11 +18,7 @@ import bearing from "@turf/bearing"
 import Compass from "components/compass/Compass"
 import PositionMarker from "components/positionMarker/PositionMarker"
 import soshLogo from "./sosh.png"
-import { randomPoint } from "@turf/random"
-import { featureEach } from "@turf/meta"
-import Helper from "components/helper/Helper"
-import Popin from "components/popin/Popin"
-import Tips from "components/tips/Tips"
+import CryptoJS from "crypto-js"
 
 interface IProps {
   className?: string
@@ -35,6 +31,11 @@ export interface IMarker {
   real: boolean
   found: boolean
   text: string
+}
+
+export interface ISimpleMarker {
+  id: number
+  found: boolean
 }
 
 interface IPoint {
@@ -56,6 +57,10 @@ function Map(props: IProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const rootRect = useBoundingClientRect(rootRef, EListener.ON_RESIZE)
 
+  const initialZoom = 15
+  const minZoom = 15
+  const maxZoom = 15
+
   const baseLocation = {
     latitude: 49.71821126434087,
     longitude: -1.9432687434509714,
@@ -63,29 +68,18 @@ function Map(props: IProps) {
 
   const [loaded, setLoaded] = useState(false)
 
-  const [zoom, setZoom] = useState(15)
-
   const [viewport, setViewport] = useState<InteractiveMapProps>(() => ({
-    maxZoom: zoom,
-    minZoom: zoom,
+    maxZoom,
+    minZoom,
     maxPitch: 0,
     minPitch: 0,
     width: 0,
     height: 0,
     latitude: baseLocation.latitude,
     longitude: baseLocation.longitude,
-    zoom: zoom,
+    zoom: initialZoom,
     dragRotate: false,
   }))
-
-  useEffect(() => {
-    setViewport({
-      ...viewport,
-      maxZoom: zoom,
-      minZoom: zoom,
-      zoom: zoom,
-    })
-  }, [zoom])
 
   // Handle viewport change
   useEffect(() => {
@@ -118,33 +112,26 @@ function Map(props: IProps) {
 
   // Minimap
 
-  const [minimapZoom, setMinimapZoom] = useState(1)
+  const minimapInitialZoom = 1
+  const minimapMinZoom = 1
+  const minimapMaxZoom = 1
 
   const [isMinimapActive, setIsMinimapActive] = useState(false)
 
   const [minimapViewport, setMinimapViewport] = useState<InteractiveMapProps>(() => ({
-    maxZoom: minimapZoom,
-    minZoom: minimapZoom,
+    maxZoom: minimapMaxZoom,
+    minZoom: minimapMinZoom,
     maxPitch: 0,
     minPitch: 0,
     width: 400,
     height: 200,
     latitude: baseLocation.latitude,
     longitude: baseLocation.longitude,
-    zoom: minimapZoom,
+    zoom: minimapInitialZoom,
     dragPan: false,
     dragRotate: false,
     keyboard: false,
   }))
-
-  useEffect(() => {
-    setMinimapViewport({
-      ...minimapViewport,
-      maxZoom: minimapZoom,
-      minZoom: minimapZoom,
-      zoom: minimapZoom,
-    })
-  }, [minimapZoom])
 
   // Handle minimap viewport change
   const handleMinimapViewportChange = (nextViewport: InteractiveMapProps) => {
@@ -158,140 +145,122 @@ function Map(props: IProps) {
     })
   }
 
-  // const baseMarkers: IMarker[] = [
-  //   // Sendai
-  //   {
-  //     id: 0,
-  //     latitude: 38.25342725471286,
-  //     longitude: 140.85597056161862,
-  //     real: true,
-  //     found: false,
-  //     text: "Sosh",
-  //   },
-  //   // A côté de la côte bretonne
-  //   {
-  //     id: 1,
-  //     latitude: 49.69235041316825,
-  //     longitude: -1.9502169526726458,
-  //     real: false,
-  //     found: false,
-  //     text: "plouf",
-  //   },
-  //   // Groenland
-  //   {
-  //     id: 2,
-  //     latitude: 60.28381951220709,
-  //     longitude: -43.384842033735914,
-  //     real: false,
-  //     found: false,
-  //     text: "brr",
-  //   },
-  //   // Washinton
-  //   {
-  //     id: 3,
-  //     latitude: 38.88507680175829,
-  //     longitude: -77.04479534149999,
-  //     real: false,
-  //     found: false,
-  //     text: "raté",
-  //   },
-  //   // Chili
-  //   {
-  //     id: 4,
-  //     latitude: -33.204878912888724,
-  //     longitude: -70.81293887483662,
-  //     real: false,
-  //     found: false,
-  //     text: "non plus !",
-  //   },
-  //   // Yémen
-  //   {
-  //     id: 5,
-  //     latitude: 12.556359886322362,
-  //     longitude: 54.029780730929524,
-  //     real: false,
-  //     found: false,
-  //     text: "Dommage !",
-  //   },
-  //   // Russie
-  //   {
-  //     id: 6,
-  //     latitude: 62.03715989584269,
-  //     longitude: 129.74276950415128,
-  //     real: false,
-  //     found: false,
-  //     text: "Loupé !",
-  //   },
-  // ]
-
-  // Markers management
-  const [pointCount, setPointCount] = useState(100)
-
-  const generateMarkers = () => {
-    const generatedMarkers = randomPoint(pointCount)
-    function randomIntFromInterval(min, max) {
-      // min and max included
-      return Math.floor(Math.random() * (max - min + 1) + min)
-    }
-    //const winningIndex = randomIntFromInterval(0, pointCount - 1)
-
-    let baseMarkers: IMarker[] = []
-    featureEach(generatedMarkers, (generatedMarker, index) => {
-      baseMarkers[index] = {
-        id: index,
-        latitude: generatedMarker.geometry.coordinates[0],
-        longitude: generatedMarker.geometry.coordinates[1],
-        real: false,
-        found: false,
-        text: "",
-      } as IMarker
-    })
-
-    baseMarkers[pointCount] = {
-      id: pointCount,
+  const baseData = [
+    {
+      id: 0,
       latitude: 38.25342725471286,
       longitude: 140.85597056161862,
       real: true,
       found: false,
       text: "Sosh",
-    }
-    return baseMarkers
+    },
+    {
+      id: 1,
+      latitude: 49.69235041316825,
+      longitude: -1.9502169526726458,
+      real: false,
+      found: false,
+      text: "plouf",
+    },
+    {
+      id: 2,
+      latitude: 60.28381951220709,
+      longitude: -43.384842033735914,
+      real: false,
+      found: false,
+      text: "brr",
+    },
+    {
+      id: 3,
+      latitude: 38.88507680175829,
+      longitude: -77.04479534149999,
+      real: false,
+      found: false,
+      text: "raté",
+    },
+    {
+      id: 4,
+      latitude: -33.204878912888724,
+      longitude: -70.81293887483662,
+      real: false,
+      found: false,
+      text: "non plus !",
+    },
+    {
+      id: 5,
+      latitude: 12.556359886322362,
+      longitude: 54.029780730929524,
+      real: false,
+      found: false,
+      text: "Dommage !",
+    },
+    {
+      id: 6,
+      latitude: 62.03715989584269,
+      longitude: 129.74276950415128,
+      real: false,
+      found: false,
+      text: "Loupé !",
+    },
+  ]
+
+  const markerString =
+    "U2FsdGVkX18tIhhPJtTw4G1CV1KjTEnc7kJh/1iou65PmG/OHm/DoLXN6MGTfsRWeRPQczwtOX+EjcYeIpxYAkd/tr692zKCvVi1A9EYvxVk+fNkef44lP9iho2yHI0ckoetkHJyGm2w4HryQVRnJDtSph7etSHzBNNxsKiBAAi8aH3RVFZVZD4qQdIckjTMOzQCUQVA3IY4bAiPVykb6RN8vZ2AQ+NIrm/RzqVEYNEurrXGvkAuZrp22Gq9kTeE5zLTkTwFnyLhDITAP8AoHeg8/dQF27qBoN97pA6jeu4vz0QjFiwQZuGDPOJ5MTr0T0rIX/gs04+F6Q5uBFHqDPDRGuf7UrQicFihX2YvgeH+g7rOUWLr5soINfEvLpHExZ9vpbL4Gv0xnLFLeRWyzJe5DWg90IhMDtQxTknd6ofDxXnOtkHCOayTEexsw+2CB5iTDcPjXlsIdr47GWCrl0nTBwBbBP512cJ1lLQP5RtpIUjt4NVj4o4kvwGsQ4GhKezQkVPnX//hwYv7W/I2crlvwQm47kCgd5Qz/KugpneqL7+GYktcQ6fwWwzCbIBu+7lrhyeTxgrx1VjMDI7JWTJiRNJnxh8wrDj2FPQF8TMBc2XWWfagnvEKmamg/r7oURAUJWpvewB6bi907srRfGDinKxq9+NUz1/ePj8Fw/BLewuoVshV+6cyCSTYfz707Dk+PtwIoVtTNUkFHzNdioLnrKLuDKVfvWiY3b145BSBdhN/DXmvmxgvJHIQGN/iBjOsPTl5B8mmvJhyFGcpF2VQu7sh/lioW2lp2ZdbF2LhmELS9zkDL66zMXB7MDGEgxIiuqhKBdQosryNGr3LIN3jv36En+JTY+KKYDryhGYiZCmlxd9rsoCcvbLO1yLUL+9VFxEDRAaAi+JiVlHc42KBxUsilgCbqKMCjrwqjCQPBRuG0gBhhAkiqgN0uxnrCOuUcxjV970Z9yA50FZVe/gXHGt/UWFfy07Sf0vQ2w18TIpxgYSQB8BRgro9V1TCkcZkfPQ+b9LVe9NapL84fmqvQKLGfHGOim8Z0SYPy5l3M/KIvp2W3COjChlljKuk"
+  const getMarkerData = () => {
+    var bytes = CryptoJS.AES.decrypt(markerString, process.env.MAPBOX_KEY)
+    var originalText = bytes.toString(CryptoJS.enc.Utf8)
+    return JSON.parse(originalText) as IMarker[]
   }
 
-  const [markers, setMarkers] = useState<IMarker[]>(generateMarkers())
-
-  useEffect(() => {
-    setMarkers(generateMarkers())
-  }, [pointCount])
+  // Markers management
+  const [markers, setMarkers] = useState<ISimpleMarker[]>(
+    getMarkerData().map((marker) => ({
+      id: marker.id,
+      found: false,
+    }))
+  )
 
   const attributionStyle = {
     right: 0,
     top: 0,
   }
 
-  const markerComponents = useMemo(() => {
-    return markers.map((marker, index) => (
-      <CustomMarker
-        key={`marker${index}`}
-        markerData={marker}
-        onClick={() => {
-          const newMarkers = [...markers]
-          newMarkers[index] = { ...markers[index], found: true }
-          setMarkers(newMarkers)
-        }}
-      />
-    ))
-  }, [markers])
+  // const markerComponents = useMemo(() => {
+  //   return markers.map((marker, index) => (
+  //     <CustomMarker
+  //       key={`marker${index}`}
+  //       markerData={marker}
+  //       onClick={() => {
+  //         console.log("clic")
+  //         const newMarkers = [...markers]
+  //         newMarkers[index] = { ...markers[index], found: true }
+  //         setMarkers(newMarkers)
+  //       }}
+  //     />
+  //   ))
+  // }, [markers])
 
-  const markerFeatureCollection = useMemo(() => {
-    const points = markers.map((marker) => {
-      return point(
-        [marker.longitude, marker.latitude], // Coordinates [lat, lon]
-        { text: marker.text, id: marker.id, icon: "soshLogo" } // properties
-      )
-    })
-    return featureCollection(points)
-  }, [markers])
+  const fakeMarkers = featureCollection(
+    getMarkerData()
+      .filter((e) => !e.real)
+      .map((marker) => {
+        return point(
+          [marker.longitude, marker.latitude], // Coordinates [lat, lon]
+          { text: marker.text, id: marker.id } // properties
+        )
+      })
+  )
+
+  const realMarkers = featureCollection(
+    getMarkerData()
+      .filter((e) => e.real)
+      .map((marker) => {
+        return point(
+          [marker.longitude, marker.latitude], // Coordinates [lat, lon]
+          { text: marker.text, icon: "soshLogo", id: marker.id } // properties
+        )
+      })
+  )
 
   // Distance & angle calculation
 
@@ -316,21 +285,22 @@ function Map(props: IProps) {
   useEffect(() => {
     if (loaded) {
       const filteredMarkers = markers.filter((e) => !e.found)
-      const distances = filteredMarkers.map((marker) =>
+      const markerData = filteredMarkers.map((marker) =>
+        getMarkerData().find((e) => e.id === marker.id)
+      )
+      const distances = markerData.map((marker) =>
         distanceToPoint({ latitude: marker.latitude, longitude: marker.longitude })
       )
       const closestIndex = distances.indexOf(Math.min(...distances))
       if (closestIndex !== -1) {
         const degrees = degreeToPoint({
-          latitude: filteredMarkers[closestIndex].latitude,
-          longitude: filteredMarkers[closestIndex].longitude,
+          latitude: markerData[closestIndex].latitude,
+          longitude: markerData[closestIndex].longitude,
         })
         setAngle(degrees)
       }
     }
-  }, [viewport, loaded, markers])
-
-  const [currentMarker, setCurrentMarker] = useState(null)
+  }, [viewport, loaded])
 
   return (
     <div className={merge([css.root, props.className])} ref={rootRef}>
@@ -348,7 +318,7 @@ function Map(props: IProps) {
         onClick={(event) => {
           const feature = mapRef.current.queryRenderedFeatures(
             [event.center.x, event.center.y],
-            { layers: ["markers"] }
+            { layers: ["markers", "marker"] }
           )[0]
           if (feature) {
             const markerIndex = markers.findIndex(
@@ -358,17 +328,32 @@ function Map(props: IProps) {
               const newMarkers = [...markers]
               newMarkers[markerIndex] = { ...markers[markerIndex], found: true }
               setMarkers(newMarkers)
-              setCurrentMarker(newMarkers[markerIndex])
             }
           }
         }}
       >
         {/* {markerComponents} */}
-        <Source id="markers" type="geojson" data={markerFeatureCollection}>
+        <Source id="fakeMarkers" type="geojson" data={fakeMarkers}>
           <Layer
             id="markers"
             type="symbol"
-            source="markers"
+            source="fakeMarkers"
+            layout={{
+              "text-field": ["get", "text"],
+              "text-variable-anchor": ["top", "bottom", "left", "right"],
+              "text-radial-offset": 0.5,
+              "text-justify": "auto",
+            }}
+            paint={{
+              "text-color": "#ffffff",
+            }}
+          />
+        </Source>
+        <Source id="realMarkers" type="geojson" data={realMarkers}>
+          <Layer
+            id="marker"
+            type="symbol"
+            source="realMarkers"
             paint={{
               "icon-color": "#DF1D53",
             }}
@@ -420,23 +405,6 @@ function Map(props: IProps) {
           />
         </ReactMapGL>
       </div>
-      <Helper
-        zoom={zoom}
-        setZoom={setZoom}
-        minimapZoom={minimapZoom}
-        setMinimapZoom={setMinimapZoom}
-        pointCount={pointCount}
-        setPointCount={setPointCount}
-      />
-      {currentMarker && (
-        <Popin
-          marker={currentMarker}
-          onClose={() => {
-            setCurrentMarker(null)
-          }}
-        />
-      )}
-      <Tips />
     </div>
   )
 }

@@ -1,0 +1,38 @@
+@import (reference) "../../references.less";
+
+.root {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+
+  z-index: 4;
+
+  padding: 20px 40px;
+  background: white;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  margin-top: 5px;
+
+  span {
+    margin-right: 5px;
+  }
+
+  .button {
+    padding: 5px 10px;
+    margin-right: 5px;
+    cursor: pointer;
+    background: #df1d53;
+    border-radius: 3px;
+    color: white;
+    font-weight: bold;
+
+    &_active {
+      background: #4b9fa9;
+    }
+  }
+}
