@@ -18,6 +18,7 @@ import bearing from "@turf/bearing"
 import Compass from "components/compass/Compass"
 import PositionMarker from "components/positionMarker/PositionMarker"
 import soshLogo from "./sosh.png"
+import CryptoJS from "crypto-js"
 
 interface IProps {
   className?: string
@@ -144,8 +145,7 @@ function Map(props: IProps) {
     })
   }
 
-  const baseMarkers: IMarker[] = [
-    // Sendai
+  const baseData = [
     {
       id: 0,
       latitude: 38.25342725471286,
@@ -154,7 +154,6 @@ function Map(props: IProps) {
       found: false,
       text: "Sosh",
     },
-    // A côté de la côte bretonne
     {
       id: 1,
       latitude: 49.69235041316825,
@@ -163,7 +162,6 @@ function Map(props: IProps) {
       found: false,
       text: "plouf",
     },
-    // Groenland
     {
       id: 2,
       latitude: 60.28381951220709,
@@ -172,7 +170,6 @@ function Map(props: IProps) {
       found: false,
       text: "brr",
     },
-    // Washinton
     {
       id: 3,
       latitude: 38.88507680175829,
@@ -181,7 +178,6 @@ function Map(props: IProps) {
       found: false,
       text: "raté",
     },
-    // Chili
     {
       id: 4,
       latitude: -33.204878912888724,
@@ -190,7 +186,6 @@ function Map(props: IProps) {
       found: false,
       text: "non plus !",
     },
-    // Yémen
     {
       id: 5,
       latitude: 12.556359886322362,
@@ -199,7 +194,6 @@ function Map(props: IProps) {
       found: false,
       text: "Dommage !",
     },
-    // Russie
     {
       id: 6,
       latitude: 62.03715989584269,
@@ -209,10 +203,17 @@ function Map(props: IProps) {
       text: "Loupé !",
     },
   ]
+  const markerString =
+    "U2FsdGVkX18tIhhPJtTw4G1CV1KjTEnc7kJh/1iou65PmG/OHm/DoLXN6MGTfsRWeRPQczwtOX+EjcYeIpxYAkd/tr692zKCvVi1A9EYvxVk+fNkef44lP9iho2yHI0ckoetkHJyGm2w4HryQVRnJDtSph7etSHzBNNxsKiBAAi8aH3RVFZVZD4qQdIckjTMOzQCUQVA3IY4bAiPVykb6RN8vZ2AQ+NIrm/RzqVEYNEurrXGvkAuZrp22Gq9kTeE5zLTkTwFnyLhDITAP8AoHeg8/dQF27qBoN97pA6jeu4vz0QjFiwQZuGDPOJ5MTr0T0rIX/gs04+F6Q5uBFHqDPDRGuf7UrQicFihX2YvgeH+g7rOUWLr5soINfEvLpHExZ9vpbL4Gv0xnLFLeRWyzJe5DWg90IhMDtQxTknd6ofDxXnOtkHCOayTEexsw+2CB5iTDcPjXlsIdr47GWCrl0nTBwBbBP512cJ1lLQP5RtpIUjt4NVj4o4kvwGsQ4GhKezQkVPnX//hwYv7W/I2crlvwQm47kCgd5Qz/KugpneqL7+GYktcQ6fwWwzCbIBu+7lrhyeTxgrx1VjMDI7JWTJiRNJnxh8wrDj2FPQF8TMBc2XWWfagnvEKmamg/r7oURAUJWpvewB6bi907srRfGDinKxq9+NUz1/ePj8Fw/BLewuoVshV+6cyCSTYfz707Dk+PtwIoVtTNUkFHzNdioLnrKLuDKVfvWiY3b145BSBdhN/DXmvmxgvJHIQGN/iBjOsPTl5B8mmvJhyFGcpF2VQu7sh/lioW2lp2ZdbF2LhmELS9zkDL66zMXB7MDGEgxIiuqhKBdQosryNGr3LIN3jv36En+JTY+KKYDryhGYiZCmlxd9rsoCcvbLO1yLUL+9VFxEDRAaAi+JiVlHc42KBxUsilgCbqKMCjrwqjCQPBRuG0gBhhAkiqgN0uxnrCOuUcxjV970Z9yA50FZVe/gXHGt/UWFfy07Sf0vQ2w18TIpxgYSQB8BRgro9V1TCkcZkfPQ+b9LVe9NapL84fmqvQKLGfHGOim8Z0SYPy5l3M/KIvp2W3COjChlljKuk"
+  const getMarkerData = () => {
+    var bytes = CryptoJS.AES.decrypt(markerString, process.env.MAPBOX_KEY)
+    var originalText = bytes.toString(CryptoJS.enc.Utf8)
+    return JSON.parse(originalText) as IMarker[]
+  }
 
   // Markers management
   const [markers, setMarkers] = useState<ISimpleMarker[]>(
-    baseMarkers.map((marker) => ({
+    getMarkerData().map((marker) => ({
       id: marker.id,
       found: false,
     }))
@@ -239,7 +240,7 @@ function Map(props: IProps) {
   // }, [markers])
 
   const fakeMarkers = featureCollection(
-    baseMarkers
+    getMarkerData()
       .filter((e) => !e.real)
       .map((marker) => {
         return point(
@@ -250,7 +251,7 @@ function Map(props: IProps) {
   )
 
   const realMarkers = featureCollection(
-    baseMarkers
+    getMarkerData()
       .filter((e) => e.real)
       .map((marker) => {
         return point(
@@ -284,7 +285,7 @@ function Map(props: IProps) {
     if (loaded) {
       const filteredMarkers = markers.filter((e) => !e.found)
       const markerData = filteredMarkers.map((marker) =>
-        baseMarkers.find((e) => e.id === marker.id)
+        getMarkerData().find((e) => e.id === marker.id)
       )
       const distances = markerData.map((marker) =>
         distanceToPoint({ latitude: marker.latitude, longitude: marker.longitude })
