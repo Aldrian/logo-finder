@@ -5,28 +5,26 @@ import { EListener, useBoundingClientRect } from "@wbe/libraries"
 import { useLocation } from "@cher-ami/router"
 import ReactMapGL, {
   AttributionControl,
-  FlyToInterpolator,
   InteractiveMapProps,
-  Layer,
   MapEvent,
   MapRef,
-  Marker,
-  NavigationControl,
   Source,
+  Layer,
 } from "react-map-gl"
 import CustomMarker from "components/CustomMarker/Marker"
-import { point, Units } from "@turf/helpers"
+import { featureCollection, point, Units } from "@turf/helpers"
 import distance from "@turf/distance"
 import bearing from "@turf/bearing"
 import Compass from "components/compass/Compass"
-import { close } from "inspector"
 import PositionMarker from "components/positionMarker/PositionMarker"
+import soshLogo from "./sosh.png"
 
 interface IProps {
   className?: string
 }
 
 export interface IMarker {
+  id: number
   latitude: number
   longitude: number
   real: boolean
@@ -86,6 +84,15 @@ function Map(props: IProps) {
     })
   }, [rootRect])
 
+  // Load map images
+  useEffect(() => {
+    const map = mapRef.current.getMap()
+    map.loadImage(soshLogo, (error, image) => {
+      if (error) throw error
+      if (!map.hasImage("soshLogo")) map.addImage("soshLogo", image, { sdf: true })
+    })
+  }, [mapRef])
+
   const handleViewportChange = (nextViewport: InteractiveMapProps) => {
     setViewport({ ...nextViewport })
     if (!isMinimapActive) {
@@ -133,6 +140,7 @@ function Map(props: IProps) {
   const [markers, setMarkers] = useState<IMarker[]>([
     // Sendai
     {
+      id: 0,
       latitude: 38.25342725471286,
       longitude: 140.85597056161862,
       real: true,
@@ -141,6 +149,7 @@ function Map(props: IProps) {
     },
     // A côté de la côte bretonne
     {
+      id: 1,
       latitude: 49.69235041316825,
       longitude: -1.9502169526726458,
       real: false,
@@ -149,6 +158,7 @@ function Map(props: IProps) {
     },
     // Groenland
     {
+      id: 2,
       latitude: 60.28381951220709,
       longitude: -43.384842033735914,
       real: false,
@@ -157,6 +167,7 @@ function Map(props: IProps) {
     },
     // Washinton
     {
+      id: 3,
       latitude: 38.88507680175829,
       longitude: -77.04479534149999,
       real: false,
@@ -165,6 +176,7 @@ function Map(props: IProps) {
     },
     // Chili
     {
+      id: 4,
       latitude: -33.204878912888724,
       longitude: -70.81293887483662,
       real: false,
@@ -173,6 +185,7 @@ function Map(props: IProps) {
     },
     // Yémen
     {
+      id: 5,
       latitude: 12.556359886322362,
       longitude: 54.029780730929524,
       real: false,
@@ -181,6 +194,7 @@ function Map(props: IProps) {
     },
     // Russie
     {
+      id: 6,
       latitude: 62.03715989584269,
       longitude: 129.74276950415128,
       real: false,
@@ -206,6 +220,30 @@ function Map(props: IProps) {
         }}
       />
     ))
+  }, [markers])
+
+  const fakeMarkers = useMemo(() => {
+    const points = markers
+      .filter((e) => !e.real)
+      .map((marker) => {
+        return point(
+          [marker.longitude, marker.latitude], // Coordinates [lat, lon]
+          { text: marker.text, id: marker.id } // properties
+        )
+      })
+    return featureCollection(points)
+  }, [markers])
+
+  const realMarkers = useMemo(() => {
+    const points = markers
+      .filter((e) => e.real)
+      .map((marker) => {
+        return point(
+          [marker.longitude, marker.latitude], // Coordinates [lat, lon]
+          { text: marker.text, icon: "soshLogo", id: marker.id } // properties
+        )
+      })
+    return featureCollection(points)
   }, [markers])
 
   // Distance & angle calculation
@@ -258,8 +296,53 @@ function Map(props: IProps) {
         onLoad={() => {
           setLoaded(true)
         }}
+        onClick={(event) => {
+          const feature = mapRef.current.queryRenderedFeatures(
+            [event.center.x, event.center.y],
+            { layers: ["markers", "marker"] }
+          )[0]
+          if (feature) {
+            const markerIndex = markers.findIndex(
+              (marker) => marker.id === feature.properties.id
+            )
+            if (markerIndex !== -1) {
+              const newMarkers = [...markers]
+              newMarkers[markerIndex] = { ...markers[markerIndex], found: true }
+              setMarkers(newMarkers)
+            }
+          }
+        }}
       >
-        {markerComponents}
+        {/* {markerComponents} */}
+        <Source id="fakeMarkers" type="geojson" data={fakeMarkers}>
+          <Layer
+            id="markers"
+            type="symbol"
+            source="fakeMarkers"
+            layout={{
+              "text-field": ["get", "text"],
+              "text-variable-anchor": ["top", "bottom", "left", "right"],
+              "text-radial-offset": 0.5,
+              "text-justify": "auto",
+            }}
+            paint={{
+              "text-color": "#ffffff",
+            }}
+          />
+        </Source>
+        <Source id="realMarkers" type="geojson" data={realMarkers}>
+          <Layer
+            id="marker"
+            type="symbol"
+            source="realMarkers"
+            paint={{
+              "icon-color": "#DF1D53",
+            }}
+            layout={{
+              "icon-image": ["get", "icon"],
+            }}
+          />
+        </Source>
         <AttributionControl compact={true} style={attributionStyle} />
       </ReactMapGL>
       <Compass angle={angle} />
@@ -272,7 +355,6 @@ function Map(props: IProps) {
           mapStyle={process.env.MAPBOX_STYLE_URL}
           mapboxApiAccessToken={process.env.MAPBOX_TOKEN}
           onViewportChange={handleMinimapViewportChange}
-          ref={mapRef}
           onMouseEnter={() => {
             setIsMinimapActive(true)
           }}
