@@ -100,8 +100,12 @@ function Map(props: IProps) {
   useEffect(() => {
     const map = mapRef.current.getMap()
     map.loadImage(soshLogo, (error, image) => {
-      if (error) throw error
-      if (!map.hasImage("soshLogo")) map.addImage("soshLogo", image, { sdf: true })
+      if (error) {
+        throw error
+      }
+      if (!map.hasImage("soshLogo")) {
+        map.addImage("soshLogo", image)
+      }
     })
   }, [mapRef])
 
